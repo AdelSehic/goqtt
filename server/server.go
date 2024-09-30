@@ -2,9 +2,9 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"goqtt/config"
 	"goqtt/logger"
+	"goqtt/workers"
 	"net"
 	"sync"
 	"time"
@@ -15,7 +15,7 @@ type Server struct {
 	ctx      context.Context
 	Listener *net.TCPListener
 	Stop     context.CancelFunc
-	Conns    map[string]Connection
+	Conns    map[string]*Connection
 }
 
 func NewServer(cfg *config.Connector) *Server {
@@ -38,7 +38,7 @@ func NewServer(cfg *config.Connector) *Server {
 		Wg:       &sync.WaitGroup{},
 		ctx:      ctx,
 		Stop:     stop,
-		Conns:    make(map[string]Connection),
+		Conns:    make(map[string]*Connection),
 	}
 }
 
@@ -51,10 +51,12 @@ func (srv *Server) Start() {
 			srv.Listener.SetDeadline(time.Now().Add(time.Second * 1))
 			conn, err := srv.Listener.AcceptTCP()
 			if err != nil {
-				logger.Console.Info().Msg("No new connections")
 				continue
 			}
-			fmt.Println(conn.RemoteAddr().String())
+			workers.GlobalPool.QueueJob(&ConnAcceptJob{
+				Srv: srv,
+				Conn: conn,
+			})
 		}
 	}
 }

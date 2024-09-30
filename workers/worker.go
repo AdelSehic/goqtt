@@ -2,11 +2,12 @@ package workers
 
 import (
 	"context"
-	"fmt"
 	"goqtt/config"
 	"goqtt/logger"
 	"sync"
 )
+
+var GlobalPool *Pool
 
 type Job interface {
 	Run()
@@ -46,17 +47,17 @@ func (pool *Pool) StartWorkers(size int) *Pool {
 			for {
 				select {
 				case <-p.Ctx.Done():
-					logger.Console.Info().Msg(fmt.Sprintf("Stopping worker with id[ %d ]", i))
+					logger.Console.Info().Msgf("Stopping worker with id[ %d ]", i)
 					p.Wg.Done()
 					return
 				case job := <-p.Queue:
 					job.Run()
-					logger.Console.Debug().Msg(fmt.Sprintf("Worker[ %d ] finished job", i))
+					logger.Console.Debug().Msgf("Worker[ %d ] finished job", i)
 				default:
 				}
 			}
 		}(pool)
-		logger.Console.Info().Msg(fmt.Sprintf("Stared worker with id[ %d ]", i))
+		logger.Console.Info().Msgf("Stared worker with id[ %d ]", i)
 	}
 	pool.open = true
 	return pool
@@ -65,8 +66,9 @@ func (pool *Pool) StartWorkers(size int) *Pool {
 func (pool *Pool) QueueJob(job Job) {
 	if pool.open {
 		pool.Queue <- job
+	} else {
+		logger.Console.Error().Msg("Trying to add jobs to a closed pool!")
 	}
-	logger.Console.Error().Msg("Trying to add jobs to a closed pool !")
 }
 
 func (pool *Pool) StopWorkers() {
