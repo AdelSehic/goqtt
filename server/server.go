@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"goqtt/config"
 	"goqtt/logger"
 	"net"
@@ -14,6 +15,7 @@ type Server struct {
 	ctx      context.Context
 	Listener *net.TCPListener
 	Stop     context.CancelFunc
+	Conns    map[string]Connection
 }
 
 func NewServer(cfg *config.Connector) *Server {
@@ -36,6 +38,7 @@ func NewServer(cfg *config.Connector) *Server {
 		Wg:       &sync.WaitGroup{},
 		ctx:      ctx,
 		Stop:     stop,
+		Conns:    make(map[string]Connection),
 	}
 }
 
@@ -45,14 +48,13 @@ func (srv *Server) Start() {
 		case <-srv.ctx.Done():
 			return
 		default:
-			srv.Listener.SetDeadline(time.Now().Add(time.Second * 2))
+			srv.Listener.SetDeadline(time.Now().Add(time.Second * 1))
 			conn, err := srv.Listener.AcceptTCP()
 			if err != nil {
 				logger.Console.Info().Msg("No new connections")
 				continue
 			}
-			srv.Wg.Add(1)
-			conn.Write([]byte("Hello"))
+			fmt.Println(conn.RemoteAddr().String())
 		}
 	}
 }

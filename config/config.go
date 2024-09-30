@@ -6,17 +6,22 @@ import (
 )
 
 type Config struct {
-	Logger *HttpLogger `json:"http-logger"`
-	Connector *Connector `json:"connector"`
+	Logger    *HttpLogger `json:"http-logger"`
+	Connector *Connector  `json:"connector"`
+	Pool      *Pool       `json:"pool"`
 }
 
 type HttpLogger struct {
-	Url   string `json:"url"`
-	Auth  string `json:"auth"`
+	Url  string `json:"url"`
+	Auth string `json:"auth"`
 }
 
 type Connector struct {
 	Port string `json:"port"`
+}
+
+type Pool struct {
+	Size int `json:"size"`
 }
 
 func LoadConfig(file string) (*Config, error) {
