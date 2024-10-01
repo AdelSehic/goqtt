@@ -44,3 +44,23 @@ func NewReadJob(conn *Connection) *ConnReadJob {
 	job.Recieved = conn.recv
 	return job
 }
+
+type ConnWriteJob struct {
+	Conn       *net.TCPConn
+	Buffer     []byte
+}
+
+func NewWriteJob(conn *net.TCPConn, data []byte) *ConnWriteJob {
+	job := &ConnWriteJob{
+		Conn: conn,
+		Buffer: make([]byte, 1024),
+	}
+	copy(job.Buffer, data)
+	return job
+}
+
+func (job *ConnWriteJob) Run() {
+	if _, err := job.Conn.Write(job.Buffer); err != nil {
+		logger.Console.Err(err).Msg("Error writing to connection!")
+	}
+}
