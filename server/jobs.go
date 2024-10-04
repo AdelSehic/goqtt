@@ -20,6 +20,7 @@ func (job *ConnAcceptJob) Run() {
 		hertz:  60,
 		buffer: make([]byte, 1024),
 		lock:   &sync.Mutex{},
+		stop:   make(chan struct{}),
 	}
 	job.Srv.Conns[conn.Conn.RemoteAddr().String()] = conn
 	go conn.HandleConnection()
@@ -33,8 +34,8 @@ func (job *ConnAcceptJob) Summary() string {
 }
 
 type ConnReadJob struct {
-	Buffer   []byte
-	Recieved int
+	Buffer     []byte
+	Recieved   int
 	RemoteAddr string
 }
 

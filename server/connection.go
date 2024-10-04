@@ -21,6 +21,7 @@ type Connection struct {
 	buffer []byte
 	recv   int
 	ID     string
+	stop   chan struct{}
 	lock   *sync.Mutex
 }
 
@@ -30,6 +31,10 @@ func (conn *Connection) Lock() {
 
 func (conn *Connection) Unlock() {
 	conn.lock.Unlock()
+}
+
+func (conn *Connection) Close() {
+	conn.stop <- struct{}{}
 }
 
 func (conn *Connection) HandleConnection() {
@@ -48,7 +53,10 @@ func (conn *Connection) HandleConnection() {
 	for {
 		select {
 		case <-conn.ctx.Done():
-			logger.Console.Info().Msgf("Closed connection to %s (SIG)", conn.Conn.RemoteAddr().String())
+			logger.Console.Info().Msgf("Closed connection to %s (program shutdown)", conn.Conn.RemoteAddr().String())
+			return
+		case <-conn.stop:
+			logger.Console.Info().Msgf("Closed connection to %s (connection interrupt)", conn.Conn.RemoteAddr().String())
 			return
 		default:
 			conn.Conn.SetDeadline(time.Now().Add(time.Second))
