@@ -15,7 +15,6 @@ type Server struct {
 	ctx      context.Context
 	Listener *net.TCPListener
 	Stop     context.CancelFunc
-	Conns    map[string]*Connection
 }
 
 func NewServer(cfg *config.Connector) *Server {
@@ -38,11 +37,11 @@ func NewServer(cfg *config.Connector) *Server {
 		Wg:       &sync.WaitGroup{},
 		ctx:      ctx,
 		Stop:     stop,
-		Conns:    make(map[string]*Connection),
 	}
 }
 
 func (srv *Server) Start() {
+	PoolInit()
 	for {
 		select {
 		case <-srv.ctx.Done():

@@ -22,7 +22,6 @@ func (job *ConnAcceptJob) Run() {
 		lock:   &sync.Mutex{},
 		stop:   make(chan struct{}),
 	}
-	job.Srv.Conns[conn.Conn.RemoteAddr().String()] = conn
 	go conn.HandleConnection()
 	logmsg := fmt.Sprintf("Connection established with %s", job.Conn.RemoteAddr())
 	logger.Console.Info().Msg(logmsg)

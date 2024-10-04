@@ -41,13 +41,20 @@ func (conn *Connection) HandleConnection() {
 	defer conn.Conn.Close()
 	timeout := conn.hertz
 	var err error
-	conn.buffer = make([]byte, 1024)
 
 	if err := conn.getID(); err != nil {
 		logger.Console.Err(err).Msg("Refusing client connection")
 		return
 	}
-	workers.GlobalPool.QueueJob(NewWriteJob(conn.Conn, []byte("Client ID received. Welcome!\n")))
+
+	if ConnectionPool.ConnExists(conn.ID) {
+		workers.GlobalPool.QueueJob(NewWriteJob(conn.Conn, []byte("Reconnecting ...\n")))
+		ConnectionPool.GetConn(conn.ID).Close()
+	} else {
+		workers.GlobalPool.QueueJob(NewWriteJob(conn.Conn, []byte("Device registered!\n")))
+		conn.buffer = make([]byte, 1024)
+	}
+	ConnectionPool.AddConn(conn)
 
 	logger.Console.Info().Msgf("Opened connection to %s (%s)", conn.Conn.RemoteAddr().String(), conn.ID)
 	for {
