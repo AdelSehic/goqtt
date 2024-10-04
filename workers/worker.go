@@ -11,6 +11,7 @@ var GlobalPool *Pool
 
 type Job interface {
 	Run()
+	Summary() string
 }
 
 type Worker struct {
