@@ -22,7 +22,9 @@ type Connection struct {
 	recv   int
 	ID     string
 	stop   chan struct{}
+	Active bool
 	lock   *sync.Mutex
+	WG     *sync.WaitGroup
 }
 
 func (conn *Connection) Lock() {
@@ -35,10 +37,11 @@ func (conn *Connection) Unlock() {
 
 func (conn *Connection) Close() {
 	conn.stop <- struct{}{}
+	conn.Conn.Close()
 }
 
 func (conn *Connection) HandleConnection() {
-	defer conn.Conn.Close()
+	defer conn.Close()
 	timeout := conn.hertz
 	var err error
 
@@ -49,12 +52,13 @@ func (conn *Connection) HandleConnection() {
 
 	if ConnectionPool.ConnExists(conn.ID) {
 		workers.GlobalPool.QueueJob(NewWriteJob(conn.Conn, []byte("Reconnecting ...\n")))
-		ConnectionPool.GetConn(conn.ID).Close()
+		ConnectionPool.CloseConn(conn.ID)
+		ConnectionPool.Reconn(conn)
 	} else {
 		workers.GlobalPool.QueueJob(NewWriteJob(conn.Conn, []byte("Device registered!\n")))
 		conn.buffer = make([]byte, 1024)
+		ConnectionPool.NewConn(conn)
 	}
-	ConnectionPool.AddConn(conn)
 
 	logger.Console.Info().Msgf("Opened connection to %s (%s)", conn.Conn.RemoteAddr().String(), conn.ID)
 	for {
@@ -73,7 +77,6 @@ func (conn *Connection) HandleConnection() {
 						logger.Console.Info().Msgf("Closed connection to %s (timeout)", conn.Conn.RemoteAddr().String())
 						return
 					}
-					logger.Console.Debug().Msgf("Timeout for %s is %d", conn.ID, timeout)
 					timeout--
 					continue
 				}

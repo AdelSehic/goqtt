@@ -23,14 +23,26 @@ func (p *ConnPool) ConnExists(id string) bool {
 	return exists
 }
 
-func (p *ConnPool) AddConn(conn *Connection) {
+func (p *ConnPool) NewConn(conn *Connection) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 	p.Connections[conn.ID] = conn
+}
+
+func (p *ConnPool) Reconn(conn *Connection) {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
+	p.Connections[conn.ID].Conn = conn.Conn
 }
 
 func (p *ConnPool) GetConn(id string) *Connection {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 	return p.Connections[id]
+}
+
+func (p *ConnPool) CloseConn(id string) {
+	p.mtx.Lock()
+	defer p.mtx.Unlock()
+	p.Connections[id].Close()
 }

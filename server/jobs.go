@@ -6,6 +6,7 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"time"
 )
 
 type ConnAcceptJob struct {
@@ -20,7 +21,8 @@ func (job *ConnAcceptJob) Run() {
 		hertz:  60,
 		buffer: make([]byte, 1024),
 		lock:   &sync.Mutex{},
-		stop:   make(chan struct{}),
+		stop:   make(chan struct{}, 16),
+		WG:     &sync.WaitGroup{},
 	}
 	go conn.HandleConnection()
 	logmsg := fmt.Sprintf("Connection established with %s", job.Conn.RemoteAddr())
@@ -41,7 +43,8 @@ type ConnReadJob struct {
 func (conn *ConnReadJob) Run() {
 	message := string(conn.Buffer[:conn.Recieved])
 	message = strings.Trim(message, "\r\n")
-	logger.Console.Println(message)
+	logger.Console.Info().Msg(message)
+	logger.HTTP.Info().Msg(message)
 }
 
 func (job *ConnReadJob) Summary() string {
@@ -74,6 +77,8 @@ func NewWriteJob(conn *net.TCPConn, data []byte) *ConnWriteJob {
 }
 
 func (job *ConnWriteJob) Run() {
+	logger.Console.Info().Msg(job.Summary())
+	job.Conn.SetDeadline(time.Now().Add(2 * time.Second))
 	if _, err := job.Conn.Write(job.Buffer); err != nil {
 		logger.Console.Err(err).Msg("Error writing to connection!")
 	}
