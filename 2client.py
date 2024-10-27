@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
 import socket
+import threading
 
 SERVER_HOST = '127.0.0.1'
 SERVER_PORT = 8080
 
 auth_headers = {
-    "ClientID": "second_client",
+    "ClientID": "python_client_two",
 }
 
 def build_headers(headers):
@@ -14,6 +15,36 @@ def build_headers(headers):
     Build headers into the correct format to be sent over TCP.
     """
     return "\r\n".join(f"{key}: {value}" for key, value in headers.items()) + "\n"
+
+def receive_messages(client_socket):
+    """
+    Continuously receive messages from the server.
+    """
+    while True:
+        try:
+            response = client_socket.recv(1024).decode('utf-8')
+            if response:
+                print(f"Server: {response}")
+            else:
+                print("Server closed the connection.")
+                break
+        except Exception as e:
+            print(f"Error receiving data: {e}")
+            break
+
+def send_messages(client_socket):
+    """
+    Continuously send messages to the server.
+    """
+    while True:
+        message = input("You: ")
+        client_socket.send(message.encode('utf-8'))
+
+        # Optionally exit on 'exit' command
+        if message.lower() == "exit":
+            print("Closing connection.")
+            client_socket.close()
+            break
 
 def start_client():
     # Create a TCP socket
@@ -29,21 +60,17 @@ def start_client():
         client_socket.send(headers.encode('utf-8'))
         print("Authentication headers sent")
 
-        # Main loop to send and receive messages
-        while True:
-            # Receive message from the server
-            response = client_socket.recv(1024).decode('utf-8')
-            if response:
-                print(f"Server: {response}")
+        # Start threads for sending and receiving
+        receive_thread = threading.Thread(target=receive_messages, args=(client_socket,))
+        send_thread = threading.Thread(target=send_messages, args=(client_socket,))
 
-            # Send message to the server
-            message = input("You: ")
-            client_socket.send(message.encode('utf-8'))
+        # Start both threads
+        receive_thread.start()
+        send_thread.start()
 
-            # If you want to close the connection with a certain message
-            if message.lower() == "exit":
-                print("Closing connection.")
-                break
+        # Wait for both threads to finish
+        receive_thread.join()
+        send_thread.join()
 
     except Exception as e:
         print(f"Error: {e}")

@@ -49,11 +49,22 @@ func (conn *ConnReadJob) Run() {
 	response := []byte("Invalid message string")
 	switch fields[0] {
 	case EV_SUBSCRIBE:
-		workers.GlobalPool.QueueJob(&SubscribeJob{
-			EventString: fields[1],
-			Conn:        conn.Conn,
-		})
-		response = []byte("Subscribed to event successfully!")
+		if len(fields) == 2 {
+			workers.GlobalPool.QueueJob(&SubscribeJob{
+				EventString: fields[1],
+				Conn:        conn.Conn,
+			})
+			response = []byte("Subscribed to event!")
+		}
+	case EV_PUBLISH:
+		if len(fields) == 3 {
+			workers.GlobalPool.QueueJob(&PublishJob{
+				EventString: fields[1],
+				Data:        fields[2],
+				Conn:        conn.Conn,
+			})
+			response = []byte("Event published!")
+		}
 	}
 	workers.GlobalPool.QueueJob(NewWriteJob(conn.Conn.Conn, response))
 	logger.Console.Info().Msg(message)
