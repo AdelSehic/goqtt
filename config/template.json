@@ -1,0 +1,12 @@
+{
+	"http-logger": {
+		"url": "",
+		"auth": ""
+	},
+	"connector": {
+		"port": ""
+	},
+	"pool": {
+		"size": int
+	}
+}
