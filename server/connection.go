@@ -92,7 +92,7 @@ func (conn *Connection) HandleConnection() {
 			conn.Lock()
 			workers.GlobalPool.QueueJob(NewReadJob(conn))
 			conn.Unlock()
-			workers.GlobalPool.QueueJob(NewWriteJob(conn.Conn, []byte("Thanks for visiting my server!\r\n")))
+			// workers.GlobalPool.QueueJob(NewWriteJob(conn.Conn, []byte("Thanks for visiting my server!\r\n")))
 		}
 	}
 }

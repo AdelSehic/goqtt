@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"goqtt/logger"
+	"goqtt/workers"
 	"net"
 	"strings"
 	"sync"
@@ -35,6 +36,7 @@ func (job *ConnAcceptJob) Summary() string {
 }
 
 type ConnReadJob struct {
+	Conn       *Connection
 	Buffer     []byte
 	Recieved   int
 	RemoteAddr string
@@ -43,6 +45,17 @@ type ConnReadJob struct {
 func (conn *ConnReadJob) Run() {
 	message := string(conn.Buffer[:conn.Recieved])
 	message = strings.Trim(message, "\r\n")
+	fields := strings.Split(message, ",")
+	response := []byte("Invalid message string")
+	switch fields[0] {
+	case EV_SUBSCRIBE:
+		workers.GlobalPool.QueueJob(&SubscribeJob{
+			EventString: fields[1],
+			Conn:        conn.Conn,
+		})
+		response = []byte("Subscribed to event successfully!")
+	}
+	workers.GlobalPool.QueueJob(NewWriteJob(conn.Conn.Conn, response))
 	logger.Console.Info().Msg(message)
 	logger.HTTP.Info().Msg(message)
 }
@@ -54,6 +67,7 @@ func (job *ConnReadJob) Summary() string {
 func NewReadJob(conn *Connection) *ConnReadJob {
 	logger.Console.Info().Msgf("New message from %s, starting read job ...", conn.Conn.RemoteAddr().String())
 	job := &ConnReadJob{
+		Conn:       conn,
 		RemoteAddr: conn.Conn.RemoteAddr().String(),
 	}
 	job.Buffer = make([]byte, 1024)

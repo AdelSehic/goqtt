@@ -42,6 +42,7 @@ func NewServer(cfg *config.Connector) *Server {
 
 func (srv *Server) Start() {
 	PoolInit()
+	EventsInit()
 	for {
 		select {
 		case <-srv.ctx.Done():
