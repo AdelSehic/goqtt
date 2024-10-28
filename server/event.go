@@ -104,6 +104,9 @@ type PublishJob struct {
 
 func (job *PublishJob) Run() {
 	ev := FindEvent(job.EventString)
+	if ev == nil {
+		return
+	}
 	for _, client := range ev.Subscribers {
 		workers.GlobalPool.QueueJob(NewWriteJob(client.Conn, []byte(job.Data)))
 	}
