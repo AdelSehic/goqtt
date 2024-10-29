@@ -2,18 +2,18 @@
 
 import socket
 import threading
+import argparse
 
 SERVER_HOST = '127.0.0.1'
 SERVER_PORT = 8080
 
-auth_headers = {
-    "ClientID": "python_client",
-}
-
-def build_headers(headers):
+def build_headers(client_id):
     """
     Build headers into the correct format to be sent over TCP.
     """
+    headers = {
+        "ClientID": client_id,
+    }
     return "\r\n".join(f"{key}: {value}" for key, value in headers.items()) + "\n"
 
 def receive_messages(client_socket):
@@ -46,7 +46,7 @@ def send_messages(client_socket):
             client_socket.close()
             break
 
-def start_client():
+def start_client(client_id):
     # Create a TCP socket
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
@@ -56,7 +56,7 @@ def start_client():
         print(f"Connected to server at {SERVER_HOST}:{SERVER_PORT}")
 
         # Send authentication headers to the server
-        headers = build_headers(auth_headers)
+        headers = build_headers(client_id)
         client_socket.send(headers.encode('utf-8'))
         print("Authentication headers sent")
 
@@ -79,5 +79,8 @@ def start_client():
         client_socket.close()
 
 if __name__ == "__main__":
-    start_client()
+    parser = argparse.ArgumentParser(description='TCP Client')
+    parser.add_argument('client_id', type=str, help='Client ID for authentication')
+    args = parser.parse_args()
 
+    start_client(args.client_id)
