@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"goqtt/logger"
+	"goqtt/sliceiterator"
 	"goqtt/workers"
 	"strings"
 	"sync"
@@ -81,15 +82,15 @@ func (job *SubscribeJob) Summary() string {
 
 func FindEvent(evString string) *Event {
 	evPath := ""
-	events := strings.Split(evString, "/")
+	eventsIterator := sliceiterator.NewIterator(strings.Split(evString, "/"))
 
 	var nextEvent *Event
 	nextEvent = RootEvent
-	for _, evName := range events {
-		if _, found := nextEvent.SubEvents[evName]; !found {
+	for ; eventsIterator.Valid(); eventsIterator.Next() {
+		if _, found := nextEvent.SubEvents[eventsIterator.Value()]; !found {
 			return nil
 		}
-		nextEvent = nextEvent.SubEvents[evName]
+		nextEvent = nextEvent.SubEvents[eventsIterator.Value()]
 		evPath += "/" + nextEvent.Name
 	}
 	logger.Console.Info().Msgf("Found event [%s]", evPath)
