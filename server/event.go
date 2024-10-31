@@ -48,7 +48,7 @@ func NewEvent(name string) *Event {
 }
 
 func EventsInit() {
-	RootEvent = NewEvent("")
+	RootEvent = NewEvent("root")
 	RootEvent.mtx = &sync.Mutex{}
 }
 
@@ -80,21 +80,25 @@ func (job *SubscribeJob) Summary() string {
 	return fmt.Sprintf("%s subscribed to event [%s]", job.Conn.ID, job.EventString)
 }
 
-func FindEvent(evString string) *Event {
-	evPath := ""
+func FindSubs(evString string) []*Connection {
 	eventsIterator := sliceiterator.NewIterator(strings.Split(evString, "/"))
 
-	var nextEvent *Event
-	nextEvent = RootEvent
-	for ; eventsIterator.Valid(); eventsIterator.Next() {
-		if _, found := nextEvent.SubEvents[eventsIterator.Value()]; !found {
-			return nil
-		}
-		nextEvent = nextEvent.SubEvents[eventsIterator.Value()]
-		evPath += "/" + nextEvent.Name
+	toNotify := make([]*Connection, 0)
+	return RootEvent.recursiveFind(eventsIterator, toNotify)
+}
+
+func (ev *Event) recursiveFind(it *sliceiterator.SliceIter[string], subs []*Connection) []*Connection {
+	logger.Console.Info().Msgf("ASDASDASD %s - %+v", ev.Name, ev.Subscribers)
+	if it.IsLast() {
+		a := sliceiterator.MapValuesToSlice(ev.Subscribers)
+		logger.Console.Info().Msgf("ASDASDASDASD: %+v", a)
+		return append(subs, sliceiterator.MapValuesToSlice(ev.Subscribers)...)
 	}
-	logger.Console.Info().Msgf("Found event [%s]", evPath)
-	return nextEvent
+
+	if _, found := ev.SubEvents[it.Value()]; !found {
+		return subs
+	}
+	return ev.SubEvents[it.Value()].recursiveFind(it.Next(), subs)
 }
 
 type PublishJob struct {
@@ -104,11 +108,8 @@ type PublishJob struct {
 }
 
 func (job *PublishJob) Run() {
-	ev := FindEvent(job.EventString)
-	if ev == nil {
-		return
-	}
-	for _, client := range ev.Subscribers {
+	subscribers := FindSubs(job.EventString)
+	for _, client := range subscribers {
 		workers.GlobalPool.QueueJob(NewWriteJob(client.Conn, []byte(job.Data)))
 	}
 }
