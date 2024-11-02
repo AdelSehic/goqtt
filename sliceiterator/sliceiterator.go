@@ -1,5 +1,7 @@
 package sliceiterator
 
+import "fmt"
+
 type SliceIter[T any] struct {
 	iterable []T
 	max      int
@@ -25,6 +27,7 @@ func (it *SliceIter[T]) Prev() *SliceIter[T] {
 }
 
 func (it *SliceIter[T]) Valid() bool {
+	fmt.Printf("IS IT VALID? %d < %d", it.index, it.max)
 	return it.index < it.max
 }
 

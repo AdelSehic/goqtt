@@ -2,7 +2,6 @@ package server
 
 import (
 	"fmt"
-	"goqtt/logger"
 	"goqtt/sliceiterator"
 	"goqtt/workers"
 	"strings"
@@ -58,22 +57,26 @@ type SubscribeJob struct {
 }
 
 func (job *SubscribeJob) Run() {
-	events := strings.Split(job.EventString, "/")
-	var nextEvent *Event
 	RootEvent.mtx.Lock()
+	defer RootEvent.mtx.Unlock()
 
-	nextEvent = RootEvent
-	for _, evName := range events {
-		if _, found := nextEvent.SubEvents[evName]; !found {
-			nextEvent.SubEvents[evName] = NewEvent(evName)
-		}
-		nextEvent = nextEvent.SubEvents[evName]
+	evIterator := sliceiterator.NewIterator(strings.Split(job.EventString, "/"))
+	event := RootEvent.subscribeHelper(evIterator, make([]*Connection, 0))
+	event.Subscribers[job.Conn.ID] = job.Conn
+	RootEvent.recursivePrint("")
+}
+
+func (ev *Event) subscribeHelper(it *sliceiterator.SliceIter[string], subs []*Connection) *Event {
+	if it.IsLast() {
+		return ev
 	}
-	nextEvent.Subscribers[job.Conn.ID] = job.Conn
-	logger.Console.Info().Msgf("%+v\n", RootEvent)
 
-	PrintAllEvents()
-	RootEvent.mtx.Unlock()
+	level := it.Value()
+	if _, found := ev.SubEvents[level]; !found {
+		ev.SubEvents[level] = NewEvent(level)
+	}
+
+	return ev.SubEvents[level].subscribeHelper(it.Next(), subs)
 }
 
 func (job *SubscribeJob) Summary() string {
@@ -88,10 +91,7 @@ func FindSubs(evString string) []*Connection {
 }
 
 func (ev *Event) recursiveFind(it *sliceiterator.SliceIter[string], subs []*Connection) []*Connection {
-	logger.Console.Info().Msgf("ASDASDASD %s - %+v", ev.Name, ev.Subscribers)
 	if it.IsLast() {
-		a := sliceiterator.MapValuesToSlice(ev.Subscribers)
-		logger.Console.Info().Msgf("ASDASDASDASD: %+v", a)
 		return append(subs, sliceiterator.MapValuesToSlice(ev.Subscribers)...)
 	}
 
