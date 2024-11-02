@@ -51,11 +51,11 @@ func (conn *Connection) HandleConnection() {
 	}
 
 	if ConnectionPool.ConnExists(conn.ID) {
-		workers.GlobalPool.QueueJob(NewWriteJob(conn.Conn, []byte("Reconnecting ...\n")))
+		workers.GlobalPool.QueueJob(NewWriteJob(conn.Conn, []byte("Reconnecting ...\n"), 0))
 		ConnectionPool.CloseConn(conn.ID)
 		ConnectionPool.Reconn(conn)
 	} else {
-		workers.GlobalPool.QueueJob(NewWriteJob(conn.Conn, []byte("Device registered!\n")))
+		workers.GlobalPool.QueueJob(NewWriteJob(conn.Conn, []byte("Device registered!\n"), 0))
 		conn.buffer = make([]byte, 1024)
 		ConnectionPool.NewConn(conn)
 	}

@@ -131,12 +131,13 @@ type PublishJob struct {
 	EventString string
 	Data        string
 	Conn        *Connection
+	QoS         int8
 }
 
 func (job *PublishJob) Run() {
 	subscribers := FindSubs(job.EventString)
 	for _, client := range subscribers {
-		workers.GlobalPool.QueueJob(NewWriteJob(client.Conn, []byte(job.Data)))
+		workers.GlobalPool.QueueJob(NewWriteJob(client.Conn, []byte(job.Data), job.QoS))
 	}
 }
 
