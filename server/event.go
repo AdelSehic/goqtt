@@ -15,8 +15,10 @@ const (
 
 type Event struct {
 	Name        string
+	Parent      *Event
 	Subscribers map[string]*Connection
 	SubEvents   map[string]*Event
+	allWildcard map[string]*Connection
 	mtx         *sync.Mutex
 }
 
@@ -29,25 +31,32 @@ func PrintAllEvents() {
 func (ev *Event) recursivePrint(evName string) {
 	evName += "/" + ev.Name
 	clients := make([]string, 0, 10)
+	wcClients := make([]string, 0, 10)
 	for _, client := range ev.Subscribers {
 		clients = append(clients, client.ID)
 	}
-	fmt.Println(evName, clients)
+	for _, wc := range ev.allWildcard {
+		wcClients = append(wcClients, wc.ID)
+	}
+	fmt.Println(evName, clients, wcClients)
 	for _, nextEv := range ev.SubEvents {
 		nextEv.recursivePrint(evName)
 	}
 }
 
-func NewEvent(name string) *Event {
+func NewEvent(name string, parent *Event) *Event {
 	return &Event{
 		Name:        name,
+		Parent:      parent,
 		Subscribers: make(map[string]*Connection),
+		allWildcard: make(map[string]*Connection),
 		SubEvents:   make(map[string]*Event),
 	}
 }
 
 func EventsInit() {
-	RootEvent = NewEvent("root")
+	RootEvent = NewEvent("root", nil)
+	RootEvent.Parent = RootEvent
 	RootEvent.mtx = &sync.Mutex{}
 }
 
@@ -61,38 +70,55 @@ func (job *SubscribeJob) Run() {
 	defer RootEvent.mtx.Unlock()
 
 	evIterator := sliceiterator.NewIterator(strings.Split(job.EventString, "/"))
-	event := RootEvent.subscribeHelper(evIterator, make([]*Connection, 0))
-	event.Subscribers[job.Conn.ID] = job.Conn
+	subsToAdd := make(map[string]*Connection)
+	subsToAdd[job.Conn.ID] = job.Conn
+
+	RootEvent.subscribeHelper(evIterator, subsToAdd)
 	RootEvent.recursivePrint("")
 }
 
-func (ev *Event) subscribeHelper(it *sliceiterator.SliceIter[string], subs []*Connection) *Event {
+func (ev *Event) subscribeHelper(it *sliceiterator.SliceIter[string], subs map[string]*Connection) {
 	if it.IsLast() {
-		return ev
+		ev.Subscribers = subs
+		return
 	}
-
 	level := it.Value()
-	if _, found := ev.SubEvents[level]; !found {
-		ev.SubEvents[level] = NewEvent(level)
+
+	if level == "#" {
+		for k, v := range subs {
+			ev.allWildcard[k] = v
+		}
+		return
 	}
 
-	return ev.SubEvents[level].subscribeHelper(it.Next(), subs)
+	if _, found := ev.SubEvents[level]; !found {
+		ev.SubEvents[level] = NewEvent(level, ev)
+	}
+
+	// recursive call
+	ev.SubEvents[level].subscribeHelper(it.Next(), subs)
 }
 
 func (job *SubscribeJob) Summary() string {
 	return fmt.Sprintf("%s subscribed to event [%s]", job.Conn.ID, job.EventString)
 }
 
-func FindSubs(evString string) []*Connection {
+func FindSubs(evString string) map[string]*Connection {
 	eventsIterator := sliceiterator.NewIterator(strings.Split(evString, "/"))
 
-	toNotify := make([]*Connection, 0)
+	toNotify := make(map[string]*Connection)
 	return RootEvent.recursiveFind(eventsIterator, toNotify)
 }
 
-func (ev *Event) recursiveFind(it *sliceiterator.SliceIter[string], subs []*Connection) []*Connection {
+func (ev *Event) recursiveFind(it *sliceiterator.SliceIter[string], subs map[string]*Connection) map[string]*Connection {
+	for k, v := range ev.allWildcard {
+		subs[k] = v
+	}
 	if it.IsLast() {
-		return append(subs, sliceiterator.MapValuesToSlice(ev.Subscribers)...)
+		for k, v := range ev.Subscribers {
+			subs[k] = v
+		}
+		return subs
 	}
 
 	if _, found := ev.SubEvents[it.Value()]; !found {
