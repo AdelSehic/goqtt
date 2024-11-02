@@ -70,24 +70,20 @@ func (job *SubscribeJob) Run() {
 	defer RootEvent.mtx.Unlock()
 
 	evIterator := sliceiterator.NewIterator(strings.Split(job.EventString, "/"))
-	subsToAdd := make(map[string]*Connection)
-	subsToAdd[job.Conn.ID] = job.Conn
 
-	RootEvent.subscribeHelper(evIterator, subsToAdd)
+	RootEvent.subscribeHelper(evIterator, job.Conn)
 	RootEvent.recursivePrint("")
 }
 
-func (ev *Event) subscribeHelper(it *sliceiterator.SliceIter[string], subs map[string]*Connection) {
+func (ev *Event) subscribeHelper(it *sliceiterator.SliceIter[string], sub *Connection) {
 	if it.IsLast() {
-		ev.Subscribers = subs
+		ev.Subscribers[sub.ID] = sub
 		return
 	}
 	level := it.Value()
 
 	if level == "#" {
-		for k, v := range subs {
-			ev.allWildcard[k] = v
-		}
+		ev.allWildcard[sub.ID] = sub
 		return
 	}
 
@@ -96,7 +92,7 @@ func (ev *Event) subscribeHelper(it *sliceiterator.SliceIter[string], subs map[s
 	}
 
 	// recursive call
-	ev.SubEvents[level].subscribeHelper(it.Next(), subs)
+	ev.SubEvents[level].subscribeHelper(it.Next(), sub)
 }
 
 func (job *SubscribeJob) Summary() string {
