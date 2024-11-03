@@ -15,33 +15,41 @@ type ConnReadJob struct {
 	RemoteAddr string
 }
 
-func (conn *ConnReadJob) Run() {
-	message := string(conn.Buffer[:conn.Recieved])
+func (job *ConnReadJob) Run() {
+	message := string(job.Buffer[:job.Recieved])
 	message = strings.Trim(message, "\r\n")
 	fields := strings.Split(message, ",")
 	response := []byte("Invalid message string")
 	switch fields[0] {
+	case EV_ACKNOWLEDGE:
+		if len(fields) != 1 {
+			break
+		}
+		job.Conn.AckChan <- struct{}{}
+		response = []byte("Acknowledge recieved")
 	case EV_SUBSCRIBE:
-		if len(fields) == 2 {
-			workers.GlobalPool.QueueJob(&SubscribeJob{
-				EventString: fields[1],
-				Conn:        conn.Conn,
-			})
-			response = []byte("Subscribed to event!")
+		if len(fields) != 2 {
+			break
 		}
+		workers.GlobalPool.QueueJob(&SubscribeJob{
+			EventString: fields[1],
+			Conn:        job.Conn,
+		})
+		response = []byte("Subscribed to event!")
 	case EV_PUBLISH:
-		if len(fields) == 4 {
-			qos, _ := strconv.Atoi(fields[3])
-			workers.GlobalPool.QueueJob(&PublishJob{
-				EventString: fields[1],
-				Data:        fields[2],
-				Conn:        conn.Conn,
-				QoS:         int8(qos),
-			})
-			response = []byte("Event published!")
+		if len(fields) != 4 {
+			break
 		}
+		qos, _ := strconv.Atoi(fields[3])
+		workers.GlobalPool.QueueJob(&PublishJob{
+			EventString: fields[1],
+			Data:        fields[2],
+			Conn:        job.Conn,
+			QoS:         int8(qos),
+		})
+		response = []byte(fmt.Sprintf("Event queued for publishing (QoS: %d)", qos))
 	}
-	workers.GlobalPool.QueueJob(NewWriteJob(conn.Conn.Conn, response, 0))
+	workers.GlobalPool.QueueJob(NewWriteJob(job.Conn, response, 0))
 	logger.Console.Info().Msg(message)
 	logger.HTTP.Info().Msg(message)
 }

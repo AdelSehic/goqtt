@@ -75,9 +75,9 @@ def start_client():
     except Exception as e:
         print(f"Error: {e}")
     finally:
+        print("Dropping")
         # Close the connection
-        client_socket.close()
+        # client_socket.close()
 
 if __name__ == "__main__":
     start_client()
-

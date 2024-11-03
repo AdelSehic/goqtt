@@ -9,8 +9,9 @@ import (
 )
 
 const (
-	EV_SUBSCRIBE = "SUB"
-	EV_PUBLISH   = "PUB"
+	EV_SUBSCRIBE   = "SUB"
+	EV_PUBLISH     = "PUB"
+	EV_ACKNOWLEDGE = "ACK"
 )
 
 type Event struct {
@@ -133,7 +134,7 @@ type PublishJob struct {
 func (job *PublishJob) Run() {
 	subscribers := FindSubs(job.EventString)
 	for _, client := range subscribers {
-		workers.GlobalPool.QueueJob(NewWriteJob(client.Conn, []byte(job.Data), job.QoS))
+		workers.GlobalPool.QueueJob(NewWriteJob(client, []byte(job.Data), job.QoS))
 	}
 }
 

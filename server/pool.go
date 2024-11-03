@@ -1,6 +1,10 @@
 package server
 
-import "sync"
+import (
+	"goqtt/logger"
+	"goqtt/workers"
+	"sync"
+)
 
 var ConnectionPool *ConnPool
 
@@ -32,7 +36,18 @@ func (p *ConnPool) NewConn(conn *Connection) {
 func (p *ConnPool) Reconn(conn *Connection) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
+
 	p.Connections[conn.ID].Conn = conn.Conn
+	reconn := p.Connections[conn.ID]
+	workers.GlobalPool.QueueJob(NewWriteJob(reconn, []byte("Reconnecting ...\n"), 0))
+
+	logger.Console.Info().Msgf("Notifications missed: %+v", reconn.Notify)
+	toSend := make([]string, 0, len(reconn.Notify))
+	toSend = append(toSend, reconn.Notify...)
+	for _, msg := range toSend {
+		workers.GlobalPool.QueueJob(NewWriteJob(reconn, []byte(msg), 1))
+	}
+	reconn.Notify = make([]string, 0)
 }
 
 func (p *ConnPool) GetConn(id string) *Connection {

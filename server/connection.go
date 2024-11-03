@@ -15,16 +15,18 @@ import (
 )
 
 type Connection struct {
-	Conn   *net.TCPConn
-	ctx    context.Context
-	hertz  int
-	buffer []byte
-	recv   int
-	ID     string
-	stop   chan struct{}
-	Active bool
-	lock   *sync.Mutex
-	WG     *sync.WaitGroup
+	Conn    *net.TCPConn
+	ctx     context.Context
+	hertz   int
+	buffer  []byte
+	recv    int
+	ID      string
+	stop    chan struct{}
+	Active  bool
+	lock    *sync.Mutex
+	WG      *sync.WaitGroup
+	AckChan chan struct{}
+	Notify  []string
 }
 
 func (conn *Connection) Lock() {
@@ -51,11 +53,10 @@ func (conn *Connection) HandleConnection() {
 	}
 
 	if ConnectionPool.ConnExists(conn.ID) {
-		workers.GlobalPool.QueueJob(NewWriteJob(conn.Conn, []byte("Reconnecting ...\n"), 0))
 		ConnectionPool.CloseConn(conn.ID)
 		ConnectionPool.Reconn(conn)
 	} else {
-		workers.GlobalPool.QueueJob(NewWriteJob(conn.Conn, []byte("Device registered!\n"), 0))
+		workers.GlobalPool.QueueJob(NewWriteJob(conn, []byte("Device registered!\n"), 0))
 		conn.buffer = make([]byte, 1024)
 		ConnectionPool.NewConn(conn)
 	}
