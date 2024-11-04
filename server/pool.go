@@ -1,6 +1,7 @@
 package server
 
 import (
+	"fmt"
 	"goqtt/logger"
 	"goqtt/workers"
 	"sync"
@@ -30,15 +31,18 @@ func (p *ConnPool) ConnExists(id string) bool {
 func (p *ConnPool) NewConn(conn *Connection) {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
+	conn.initFreshConn()
 	p.Connections[conn.ID] = conn
 }
 
-func (p *ConnPool) Reconn(conn *Connection) {
+func (p *ConnPool) Reconn(conn *Connection) *Connection {
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
 	p.Connections[conn.ID].Conn = conn.Conn
 	reconn := p.Connections[conn.ID]
+	fmt.Println(p.Connections[conn.ID].Conn)
+
 	workers.GlobalPool.QueueJob(NewWriteJob(reconn, []byte("Reconnecting ...\n"), 0))
 
 	logger.Console.Info().Msgf("Notifications missed: %+v", reconn.Notify)
@@ -48,6 +52,13 @@ func (p *ConnPool) Reconn(conn *Connection) {
 		workers.GlobalPool.QueueJob(NewWriteJob(reconn, []byte(msg), 1))
 	}
 	reconn.Notify = make([]string, 0)
+
+	for len(conn.stop) > 0 {
+		<-conn.stop
+		fmt.Println("##### INTERRUPTED A STOP SIGNAL ####")
+	}
+
+	return p.Connections[conn.ID]
 }
 
 func (p *ConnPool) GetConn(id string) *Connection {

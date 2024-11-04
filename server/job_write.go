@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"goqtt/logger"
+	"goqtt/workers"
 	"time"
 )
 
@@ -43,22 +44,21 @@ func (job *ConnWriteJob) qos0write() {
 }
 
 func (job *ConnWriteJob) qos1write() {
-	for {
-		job.Conn.Conn.SetDeadline(time.Now().Add(1 * time.Second))
-		if _, err := job.Conn.Conn.Write(job.Buffer); err != nil {
-			logger.Console.Err(err).Msg("Conn unavalible, added to notifications")
-			job.Conn.Notify = append(job.Conn.Notify, string(job.Buffer))
-			return
-		}
-
-		select {
-		case <-job.Conn.AckChan:
-			logger.Console.Info().Msgf("Acknowledge recieved from %s", job.Conn.Conn.RemoteAddr())
-			return
-		case <-time.After(5 * time.Second):
-			logger.Console.Info().Msgf("Have not recieved ACK from %s, resending ...", job.Conn.Conn.RemoteAddr())
-		}
+	job.Conn.Conn.SetDeadline(time.Now().Add(1 * time.Second))
+	if _, err := job.Conn.Conn.Write(job.Buffer); err != nil {
+		logger.Console.Err(err).Msg("Conn unavalible, added to notifications")
+		job.Conn.Notify = append(job.Conn.Notify, string(job.Buffer))
+		return
 	}
+
+	select {
+	case <-job.Conn.AckChan:
+		logger.Console.Info().Msgf("Acknowledge recieved from %s", job.Conn.Conn.RemoteAddr())
+		return
+	case <-time.After(2 * time.Second):
+		logger.Console.Info().Msgf("Have not recieved ACK from %s, resending ...", job.Conn.Conn.RemoteAddr())
+	}
+	workers.GlobalPool.QueueJob(job)
 }
 
 func (job *ConnWriteJob) qos2write() {

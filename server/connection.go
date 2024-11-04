@@ -54,11 +54,15 @@ func (conn *Connection) HandleConnection() {
 
 	if ConnectionPool.ConnExists(conn.ID) {
 		ConnectionPool.CloseConn(conn.ID)
-		ConnectionPool.Reconn(conn)
+		conn = ConnectionPool.Reconn(conn)
 	} else {
 		workers.GlobalPool.QueueJob(NewWriteJob(conn, []byte("Device registered!\n"), 0))
-		conn.buffer = make([]byte, 1024)
 		ConnectionPool.NewConn(conn)
+	}
+
+	// clear the stop channel
+	for len(conn.stop) > 0 {
+		<-conn.stop
 	}
 
 	logger.Console.Info().Msgf("Opened connection to %s (%s)", conn.Conn.RemoteAddr().String(), conn.ID)
