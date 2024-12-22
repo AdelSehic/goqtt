@@ -65,6 +65,7 @@ func (conn *Connection) HandleConnection() {
 		<-conn.stop
 	}
 
+	conn.Active = true
 	logger.Console.Info().Msgf("Opened connection to %s (%s)", conn.Conn.RemoteAddr().String(), conn.ID)
 	for {
 		select {
@@ -72,6 +73,9 @@ func (conn *Connection) HandleConnection() {
 			logger.Console.Info().Msgf("Closed connection to %s (program shutdown)", conn.Conn.RemoteAddr().String())
 			return
 		case <-conn.stop:
+			conn.Lock()
+			conn.Active = false
+			conn.Unlock()
 			logger.Console.Info().Msgf("Closed connection to %s (connection interrupt)", conn.Conn.RemoteAddr().String())
 			return
 		default:
@@ -80,6 +84,7 @@ func (conn *Connection) HandleConnection() {
 				if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 					if timeout <= 0 {
 						logger.Console.Info().Msgf("Closed connection to %s (timeout)", conn.Conn.RemoteAddr().String())
+						conn.Active = false
 						return
 					}
 					timeout--

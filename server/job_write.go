@@ -24,6 +24,9 @@ func NewWriteJob(conn *Connection, data []byte, qos int8) *ConnWriteJob {
 }
 
 func (job *ConnWriteJob) Run() {
+	if !job.Conn.Active {
+		return
+	}
 	logger.Console.Info().Msg(job.Summary())
 	switch job.QoS {
 	case 0:
@@ -40,6 +43,8 @@ func (job *ConnWriteJob) qos0write() {
 	if _, err := job.Conn.Conn.Write(job.Buffer); err != nil {
 		logger.Console.Err(err).Msg("Error writing to connection (QoS 0)")
 		logger.Console.Debug().Stack().Err(err)
+		job.Conn.stop <- struct{}{}
+		job.Conn.Active = false
 	}
 }
 
@@ -48,6 +53,7 @@ func (job *ConnWriteJob) qos1write() {
 	if _, err := job.Conn.Conn.Write(job.Buffer); err != nil {
 		logger.Console.Err(err).Msg("Conn unavalible, added to notifications")
 		job.Conn.Notify = append(job.Conn.Notify, string(job.Buffer))
+		job.Conn.stop <- struct{}{}
 		return
 	}
 

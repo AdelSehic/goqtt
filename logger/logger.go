@@ -14,7 +14,7 @@ var HTTP zerolog.Logger
 
 func Init(cfg *config.HttpLogger){
 	Console = zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.DateTime}).
-	Level(zerolog.TraceLevel).
+	Level(zerolog.InfoLevel).
 	With().Timestamp().Caller().Int("pid", os.Getpid()).Logger()
 
 	HTTP = zerolog.New(&HttpLogger{

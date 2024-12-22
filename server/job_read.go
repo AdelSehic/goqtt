@@ -19,7 +19,7 @@ func (job *ConnReadJob) Run() {
 	message := string(job.Buffer[:job.Recieved])
 	message = strings.Trim(message, "\r\n")
 	fields := strings.Split(message, ",")
-	response := []byte("Invalid message string")
+	var response []byte
 	switch fields[0] {
 	case EV_ACKNOWLEDGE:
 		if len(fields) != 1 {
@@ -48,6 +48,8 @@ func (job *ConnReadJob) Run() {
 			QoS:         int8(qos),
 		})
 		response = []byte(fmt.Sprintf("Event queued for publishing (QoS: %d)", qos))
+	default:
+		response = []byte("Invalid string")
 	}
 	workers.GlobalPool.QueueJob(NewWriteJob(job.Conn, response, 0))
 	logger.Console.Info().Msg(message)
