@@ -15,7 +15,7 @@ type HttpLogger struct {
 func (sw *HttpLogger) Write(p []byte) (n int, err error){
 	r, err := http.NewRequest("POST", sw.Url, bytes.NewBuffer(p))
 	if err != nil {
-		Console.Err(err).Msg("Failed to create Logger POST request body")
+		Default.Err(err).Msg("Failed to create Logger POST request body")
 		fmt.Println()
 		return 0, err
 	}
@@ -24,7 +24,7 @@ func (sw *HttpLogger) Write(p []byte) (n int, err error){
 
 	resp, err := sw.Client.Do(r)
 	if err != nil {
-		Console.Err(err).Msg("Failed to send Logger POST request")
+		Default.Err(err).Msg("Failed to send Logger POST request")
 		return 0, err
 	}
 	resp.Body.Close()

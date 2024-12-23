@@ -20,7 +20,7 @@ func (job *ConnAcceptJob) Run() {
 	}
 	go conn.HandleConnection()
 	logmsg := fmt.Sprintf("Connection established with %s", job.Conn.RemoteAddr())
-	logger.Console.Info().Msg(logmsg)
+	logger.Default.Info().Msg(logmsg)
 	logger.HTTP.Info().Msg(logmsg)
 }
 

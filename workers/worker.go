@@ -48,17 +48,17 @@ func (pool *Pool) StartWorkers(size int) *Pool {
 			for {
 				select {
 				case <-p.Ctx.Done():
-					logger.Console.Info().Msgf("Stopping worker with id[ %d ]", i)
+					logger.Default.Info().Msgf("Stopping worker with id[ %d ]", i)
 					p.Wg.Done()
 					return
 				case job := <-p.Queue:
 					job.Run()
-					logger.Console.Debug().Msgf("Worker[ %d ] finished job", i)
+					logger.Default.Debug().Msgf("Worker[ %d ] finished job", i)
 				default:
 				}
 			}
 		}(pool)
-		logger.Console.Info().Msgf("Stared worker with id[ %d ]", i)
+		logger.Default.Info().Msgf("Stared worker with id[ %d ]", i)
 	}
 	pool.open = true
 	return pool
@@ -68,7 +68,7 @@ func (pool *Pool) QueueJob(job Job) {
 	if pool.open {
 		pool.Queue <- job
 	} else {
-		logger.Console.Error().Msg("Trying to add jobs to a closed pool!")
+		logger.Default.Error().Msg("Trying to add jobs to a closed pool!")
 	}
 }
 

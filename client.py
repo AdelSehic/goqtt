@@ -4,8 +4,11 @@ import socket
 import threading
 import argparse
 
-SERVER_HOST = '127.0.0.1'
-SERVER_PORT = 8080
+# SERVER_HOST = '127.0.0.1'
+# SERVER_PORT = 8080
+
+SERVER_HOST = '192.168.100.2'
+SERVER_PORT = 32490
 
 def build_headers(client_id):
     """

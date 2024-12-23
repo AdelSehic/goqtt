@@ -54,7 +54,7 @@ func (job *ConnReadJob) Run() {
 		response = []byte("Invalid string")
 	}
 	workers.GlobalPool.QueueJob(NewWriteJob(job.Conn, response, 0))
-	logger.Console.Info().Msg(message)
+	logger.Default.Info().Msg(message)
 	logger.HTTP.Info().Msg(message)
 }
 
@@ -63,7 +63,7 @@ func (job *ConnReadJob) Summary() string {
 }
 
 func NewReadJob(conn *Connection) *ConnReadJob {
-	logger.Console.Info().Msgf("New message from %s, starting read job ...", conn.Conn.RemoteAddr().String())
+	logger.Default.Info().Msgf("New message from %s, starting read job ...", conn.Conn.RemoteAddr().String())
 	job := &ConnReadJob{
 		Conn:       conn,
 		RemoteAddr: conn.Conn.RemoteAddr().String(),

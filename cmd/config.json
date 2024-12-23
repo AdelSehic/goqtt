@@ -1,0 +1,12 @@
+{
+    "http-logger": {
+        "url": "https://in.logs.betterstack.com/",
+        "auth": "wFnsmwUJCr34Zufwv41DYHbL"
+    },
+    "connector": {
+        "port": ":8080"
+    },
+    "pool": {
+        "size": 64
+    }
+}

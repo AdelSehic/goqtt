@@ -21,13 +21,13 @@ func NewServer(cfg *config.Connector) *Server {
 
 	addr, err := net.ResolveTCPAddr("tcp", cfg.Port)
 	if err != nil {
-		logger.Console.Err(err).Msg("Couldn't resolve port")
+		logger.Default.Err(err).Msg("Couldn't resolve port")
 		return nil
 	}
 
 	lsn, err := net.ListenTCP("tcp", addr)
 	if err != nil {
-		logger.Console.Err(err).Msg("Couldn't listen on provided address")
+		logger.Default.Err(err).Msg("Couldn't listen on provided address")
 		return nil
 	}
 

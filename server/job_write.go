@@ -27,7 +27,7 @@ func (job *ConnWriteJob) Run() {
 	if !job.Conn.Active {
 		return
 	}
-	logger.Console.Info().Msg(job.Summary())
+	logger.Default.Info().Msg(job.Summary())
 	switch job.QoS {
 	case 0:
 		job.qos0write()
@@ -41,8 +41,8 @@ func (job *ConnWriteJob) Run() {
 func (job *ConnWriteJob) qos0write() {
 	job.Conn.Conn.SetDeadline(time.Now().Add(2 * time.Second))
 	if _, err := job.Conn.Conn.Write(job.Buffer); err != nil {
-		logger.Console.Err(err).Msg("Error writing to connection (QoS 0)")
-		logger.Console.Debug().Stack().Err(err)
+		logger.Default.Err(err).Msg("Error writing to connection (QoS 0)")
+		logger.Default.Debug().Stack().Err(err)
 		job.Conn.stop <- struct{}{}
 		job.Conn.Active = false
 	}
@@ -51,7 +51,7 @@ func (job *ConnWriteJob) qos0write() {
 func (job *ConnWriteJob) qos1write() {
 	job.Conn.Conn.SetDeadline(time.Now().Add(1 * time.Second))
 	if _, err := job.Conn.Conn.Write(job.Buffer); err != nil {
-		logger.Console.Err(err).Msg("Conn unavalible, added to notifications")
+		logger.Default.Err(err).Msg("Conn unavalible, added to notifications")
 		job.Conn.Notify = append(job.Conn.Notify, string(job.Buffer))
 		job.Conn.stop <- struct{}{}
 		return
@@ -59,10 +59,10 @@ func (job *ConnWriteJob) qos1write() {
 
 	select {
 	case <-job.Conn.AckChan:
-		logger.Console.Info().Msgf("Acknowledge recieved from %s", job.Conn.Conn.RemoteAddr())
+		logger.Default.Info().Msgf("Acknowledge recieved from %s", job.Conn.Conn.RemoteAddr())
 		return
 	case <-time.After(2 * time.Second):
-		logger.Console.Info().Msgf("Have not recieved ACK from %s, resending ...", job.Conn.Conn.RemoteAddr())
+		logger.Default.Info().Msgf("Have not recieved ACK from %s, resending ...", job.Conn.Conn.RemoteAddr())
 	}
 	workers.GlobalPool.QueueJob(job)
 }

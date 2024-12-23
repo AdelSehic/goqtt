@@ -48,7 +48,7 @@ func (conn *Connection) HandleConnection() {
 	var err error
 
 	if err := conn.getID(); err != nil {
-		logger.Console.Err(err).Msg("Refusing client connection")
+		logger.Default.Err(err).Msg("Refusing client connection")
 		return
 	}
 
@@ -66,24 +66,24 @@ func (conn *Connection) HandleConnection() {
 	}
 
 	conn.Active = true
-	logger.Console.Info().Msgf("Opened connection to %s (%s)", conn.Conn.RemoteAddr().String(), conn.ID)
+	logger.Default.Info().Msgf("Opened connection to %s (%s)", conn.Conn.RemoteAddr().String(), conn.ID)
 	for {
 		select {
 		case <-conn.ctx.Done():
-			logger.Console.Info().Msgf("Closed connection to %s (program shutdown)", conn.Conn.RemoteAddr().String())
+			logger.Default.Info().Msgf("Closed connection to %s (program shutdown)", conn.Conn.RemoteAddr().String())
 			return
 		case <-conn.stop:
 			conn.Lock()
 			conn.Active = false
 			conn.Unlock()
-			logger.Console.Info().Msgf("Closed connection to %s (connection interrupt)", conn.Conn.RemoteAddr().String())
+			logger.Default.Info().Msgf("Closed connection to %s (connection interrupt)", conn.Conn.RemoteAddr().String())
 			return
 		default:
 			conn.Conn.SetDeadline(time.Now().Add(time.Second))
 			if conn.recv, err = conn.Conn.Read(conn.buffer); err != nil {
 				if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 					if timeout <= 0 {
-						logger.Console.Info().Msgf("Closed connection to %s (timeout)", conn.Conn.RemoteAddr().String())
+						logger.Default.Info().Msgf("Closed connection to %s (timeout)", conn.Conn.RemoteAddr().String())
 						conn.Active = false
 						return
 					}
@@ -91,9 +91,9 @@ func (conn *Connection) HandleConnection() {
 					continue
 				}
 				if err != io.EOF { // Handle non-EOF errors
-					logger.Console.Err(err).Msgf("Connection %s dropped", conn.Conn.RemoteAddr().String())
+					logger.Default.Err(err).Msgf("Connection %s dropped", conn.Conn.RemoteAddr().String())
 				} else { // or handle EOF
-					logger.Console.Info().Msgf("Connection %s closed by client", conn.Conn.RemoteAddr().String())
+					logger.Default.Info().Msgf("Connection %s closed by client", conn.Conn.RemoteAddr().String())
 					logger.HTTP.Info().Msgf("Connection %s closed by client", conn.Conn.RemoteAddr().String())
 				}
 				return
