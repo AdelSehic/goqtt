@@ -12,6 +12,7 @@ const (
 	EV_SUBSCRIBE   = "SUB"
 	EV_PUBLISH     = "PUB"
 	EV_ACKNOWLEDGE = "ACK"
+	EV_PING        = "PING"
 )
 
 type Event struct {

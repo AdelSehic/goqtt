@@ -18,9 +18,11 @@ type ConnReadJob struct {
 func (job *ConnReadJob) Run() {
 	message := string(job.Buffer[:job.Recieved])
 	message = strings.Trim(message, "\r\n")
-	fields := strings.Split(message, ",")
+	fields := SplitWithEscaping(message, ",", "\\")
 	var response []byte
 	switch fields[0] {
+	case EV_PING:
+		response = []byte("Pong")
 	case EV_ACKNOWLEDGE:
 		if len(fields) != 1 {
 			break
@@ -70,4 +72,13 @@ func NewReadJob(conn *Connection) *ConnReadJob {
 	copy(job.Buffer, conn.buffer)
 	job.Recieved = conn.recv
 	return job
+}
+
+func SplitWithEscaping(s, separator, escape string) []string {
+	s = strings.ReplaceAll(s, escape+separator, "\x00")
+	tokens := strings.Split(s, separator)
+	for i, token := range tokens {
+		tokens[i] = strings.ReplaceAll(token, "\x00", separator)
+	}
+	return tokens
 }
