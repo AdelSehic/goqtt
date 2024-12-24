@@ -13,17 +13,12 @@ var Default zerolog.Logger
 var HTTP zerolog.Logger
 
 func Init(cfg *config.HttpLogger) {
-	logFile, err := os.OpenFile("goqtt.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err != nil {
-		panic(err)
-	}
-
-	fileWriter := zerolog.ConsoleWriter{
-		Out:        logFile,
+	logWriter := zerolog.ConsoleWriter{
+		Out:        os.Stdout,
 		TimeFormat: time.RFC3339,
 	}
 
-	Default = zerolog.New(fileWriter).Level(zerolog.InfoLevel).
+	Default = zerolog.New(logWriter).Level(zerolog.InfoLevel).
 		With().Timestamp().Caller().Logger()
 
 	HTTP = zerolog.New(&HttpLogger{

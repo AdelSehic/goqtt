@@ -14,10 +14,10 @@ import (
 func main() {
 	confFile := os.Getenv("CONFIG_PATH")
 	if confFile == "" {
-		confFile = "config.json"
+		confFile = "config/config.json"
 	}
 
-	config, err := config.LoadConfig("config.json")
+	config, err := config.LoadConfig(confFile)
 	if err != nil {
 		panic(err)
 	}
