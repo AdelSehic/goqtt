@@ -13,6 +13,7 @@ const (
 	EV_PUBLISH     = "PUB"
 	EV_ACKNOWLEDGE = "ACK"
 	EV_PING        = "PING"
+	EV_KEEPALIVE   = "LIVE"
 )
 
 type Event struct {
@@ -128,12 +129,13 @@ func (ev *Event) recursiveFind(it *sliceiterator.SliceIter[string], subs map[str
 type PublishJob struct {
 	Msg  *Message
 	Conn *Connection
+	Data []byte
 }
 
 func (job *PublishJob) Run() {
 	subscribers := FindSubs(job.Msg.Topic)
 	for _, client := range subscribers {
-		workers.GlobalPool.QueueJob(NewWriteJob(client, []byte(job.Msg.Value), job.Msg.Qos))
+		workers.GlobalPool.QueueJob(NewWriteJob(client, job.Data, job.Msg.Qos))
 	}
 }
 

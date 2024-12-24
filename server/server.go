@@ -18,10 +18,11 @@ type Server struct {
 }
 
 type Message struct {
-	Type  string `json:"type"`
-	Topic string `json:"topic"`
-	Value string `json:"value"`
-	Qos   int8   `json:"qos"`
+	Sender string `json:"sender"`
+	Type   string `json:"type"`
+	Topic  string `json:"topic"`
+	Value  string `json:"value"`
+	Qos    int8   `json:"qos"`
 }
 
 func NewServer(cfg *config.Connector) *Server {

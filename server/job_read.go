@@ -22,7 +22,9 @@ func (job *ConnReadJob) Run() {
 		workers.GlobalPool.QueueJob(NewWriteJob(job.Conn, []byte("Invalid JSON recieved"), 0))
 		return
 	}
-	var response []byte
+	message.Sender = job.Conn.ID
+
+	response, _ := json.Marshal(message)
 	switch message.Type {
 	case EV_PING:
 		response = []byte("Pong")
@@ -42,8 +44,12 @@ func (job *ConnReadJob) Run() {
 		workers.GlobalPool.QueueJob(&PublishJob{
 			Conn: job.Conn,
 			Msg:  message,
+			Data: response,
 		})
 		response = []byte("Event queued for publishing")
+	case EV_KEEPALIVE:
+		logger.Default.Info().Msg(string(rawJson))
+		return
 	default:
 		response = []byte("Invalid string")
 	}
