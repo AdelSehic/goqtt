@@ -1,11 +1,10 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"goqtt/logger"
 	"goqtt/workers"
-	"strconv"
-	"strings"
 )
 
 type ConnReadJob struct {
@@ -16,46 +15,40 @@ type ConnReadJob struct {
 }
 
 func (job *ConnReadJob) Run() {
-	message := string(job.Buffer[:job.Recieved])
-	message = strings.Trim(message, "\r\n")
-	fields := SplitWithEscaping(message, ",", "\\")
+	message := &Message{}
+	rawJson := job.Buffer[:job.Recieved]
+	if err := json.Unmarshal(rawJson, message); err != nil {
+		logger.Default.Error().Err(err).Msg("Error while unmarshalling JSON: " + string(rawJson))
+		return
+	}
 	var response []byte
-	switch fields[0] {
+	switch message.Topic {
 	case EV_PING:
 		response = []byte("Pong")
 	case EV_ACKNOWLEDGE:
-		if len(fields) != 1 {
-			break
-		}
 		job.Conn.AckChan <- struct{}{}
 		response = []byte("Acknowledge recieved")
 	case EV_SUBSCRIBE:
-		if len(fields) != 2 {
+		if message.Topic == "" {
 			break
 		}
 		workers.GlobalPool.QueueJob(&SubscribeJob{
-			EventString: fields[1],
+			EventString: message.Topic,
 			Conn:        job.Conn,
 		})
 		response = []byte("Subscribed to event!")
 	case EV_PUBLISH:
-		if len(fields) != 4 {
-			break
-		}
-		qos, _ := strconv.Atoi(fields[3])
 		workers.GlobalPool.QueueJob(&PublishJob{
-			EventString: fields[1],
-			Data:        fields[2],
-			Conn:        job.Conn,
-			QoS:         int8(qos),
+			Conn: job.Conn,
+			Msg:  message,
 		})
-		response = []byte(fmt.Sprintf("Event queued for publishing (QoS: %d)", qos))
+		response = []byte("Event queued for publishing")
 	default:
 		response = []byte("Invalid string")
 	}
 	workers.GlobalPool.QueueJob(NewWriteJob(job.Conn, response, 0))
-	logger.Default.Info().Msg(message)
-	logger.HTTP.Info().Msg(message)
+	logger.Default.Info().Msg(string(rawJson))
+	logger.HTTP.Info().Msg(string(rawJson))
 }
 
 func (job *ConnReadJob) Summary() string {
@@ -72,13 +65,4 @@ func NewReadJob(conn *Connection) *ConnReadJob {
 	copy(job.Buffer, conn.buffer)
 	job.Recieved = conn.recv
 	return job
-}
-
-func SplitWithEscaping(s, separator, escape string) []string {
-	s = strings.ReplaceAll(s, escape+separator, "\x00")
-	tokens := strings.Split(s, separator)
-	for i, token := range tokens {
-		tokens[i] = strings.ReplaceAll(token, "\x00", separator)
-	}
-	return tokens
 }

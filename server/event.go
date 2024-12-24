@@ -126,19 +126,17 @@ func (ev *Event) recursiveFind(it *sliceiterator.SliceIter[string], subs map[str
 }
 
 type PublishJob struct {
-	EventString string
-	Data        string
-	Conn        *Connection
-	QoS         int8
+	Msg  *Message
+	Conn *Connection
 }
 
 func (job *PublishJob) Run() {
-	subscribers := FindSubs(job.EventString)
+	subscribers := FindSubs(job.Msg.Topic)
 	for _, client := range subscribers {
-		workers.GlobalPool.QueueJob(NewWriteJob(client, []byte(job.Data), job.QoS))
+		workers.GlobalPool.QueueJob(NewWriteJob(client, []byte(job.Msg.Value), job.Msg.Qos))
 	}
 }
 
 func (job *PublishJob) Summary() string {
-	return fmt.Sprintf("Publish event to [%s] from [%s]", job.EventString, job.Conn.ID)
+	return fmt.Sprintf("Publish event to [%s] from [%s]", job.Msg.Topic, job.Conn.ID)
 }

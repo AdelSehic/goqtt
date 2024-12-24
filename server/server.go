@@ -17,6 +17,13 @@ type Server struct {
 	Stop     context.CancelFunc
 }
 
+type Message struct {
+	Type  string `json:"type"`
+	Topic string `json:"topic"`
+	Value string `json:"value"`
+	Qos   int8   `json:"qos"`
+}
+
 func NewServer(cfg *config.Connector) *Server {
 
 	addr, err := net.ResolveTCPAddr("tcp", cfg.Port)
@@ -54,7 +61,7 @@ func (srv *Server) Start() {
 				continue
 			}
 			workers.GlobalPool.QueueJob(&ConnAcceptJob{
-				Srv: srv,
+				Srv:  srv,
 				Conn: conn,
 			})
 		}
