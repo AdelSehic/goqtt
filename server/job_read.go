@@ -19,10 +19,11 @@ func (job *ConnReadJob) Run() {
 	rawJson := job.Buffer[:job.Recieved]
 	if err := json.Unmarshal(rawJson, message); err != nil {
 		logger.Default.Error().Err(err).Msg("Error while unmarshalling JSON: " + string(rawJson))
+		workers.GlobalPool.QueueJob(NewWriteJob(job.Conn, []byte("Invalid JSON recieved"), 0))
 		return
 	}
 	var response []byte
-	switch message.Topic {
+	switch message.Type {
 	case EV_PING:
 		response = []byte("Pong")
 	case EV_ACKNOWLEDGE:
@@ -36,7 +37,7 @@ func (job *ConnReadJob) Run() {
 			EventString: message.Topic,
 			Conn:        job.Conn,
 		})
-		response = []byte("Subscribed to event!")
+		response = []byte("Subscribed to event")
 	case EV_PUBLISH:
 		workers.GlobalPool.QueueJob(&PublishJob{
 			Conn: job.Conn,

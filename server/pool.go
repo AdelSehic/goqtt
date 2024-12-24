@@ -41,9 +41,8 @@ func (p *ConnPool) Reconn(conn *Connection) *Connection {
 
 	p.Connections[conn.ID].Conn = conn.Conn
 	reconn := p.Connections[conn.ID]
-	fmt.Println(p.Connections[conn.ID].Conn)
 
-	workers.GlobalPool.QueueJob(NewWriteJob(reconn, []byte("Reconnecting ...\n"), 0))
+	// workers.GlobalPool.QueueJob(NewWriteJob(reconn, []byte("Reconnecting ..."), 0))
 
 	logger.Default.Info().Msgf("Notifications missed: %+v", reconn.Notify)
 	toSend := make([]string, 0, len(reconn.Notify))

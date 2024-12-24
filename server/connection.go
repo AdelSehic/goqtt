@@ -52,21 +52,24 @@ func (conn *Connection) HandleConnection() {
 		return
 	}
 
+	welcome := ""
 	if ConnectionPool.ConnExists(conn.ID) {
 		ConnectionPool.CloseConn(conn.ID)
 		conn = ConnectionPool.Reconn(conn)
+		welcome = "Reconnected"
 	} else {
-		workers.GlobalPool.QueueJob(NewWriteJob(conn, []byte("Device registered!\n"), 0))
 		ConnectionPool.NewConn(conn)
+		welcome = "Device registered"
 	}
+	logger.Default.Info().Msgf("Opened connection to %s (%s)", conn.Conn.RemoteAddr().String(), conn.ID)
 
 	// clear the stop channel
 	for len(conn.stop) > 0 {
 		<-conn.stop
 	}
-
 	conn.Active = true
-	logger.Default.Info().Msgf("Opened connection to %s (%s)", conn.Conn.RemoteAddr().String(), conn.ID)
+
+	workers.GlobalPool.QueueJob(NewWriteJob(conn, []byte(welcome), 0))
 	for {
 		select {
 		case <-conn.ctx.Done():

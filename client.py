@@ -3,12 +3,10 @@
 import socket
 import threading
 import argparse
+import json
 
-# SERVER_HOST = '127.0.0.1'
-# SERVER_PORT = 8080
-
-SERVER_HOST = '192.168.100.2'
-SERVER_PORT = 32490
+SERVER_HOST = '127.0.0.1'
+SERVER_PORT = 8080
 
 def build_headers(client_id):
     """
@@ -40,7 +38,7 @@ def send_messages(client_socket):
     Continuously send messages to the server.
     """
     while True:
-        message = input("You: ")
+        message = input("")
         client_socket.send(message.encode('utf-8'))
 
         # Optionally exit on 'exit' command
@@ -62,6 +60,20 @@ def start_client(client_id):
         headers = build_headers(client_id)
         client_socket.send(headers.encode('utf-8'))
         print("Authentication headers sent")
+
+        response = client_socket.recv(1024).decode('utf-8')
+        print(f"Server Response: {response}")
+
+        subscribe = {
+            "type": "SUB",
+            "topic": "temp/#"
+        }
+
+        client_socket.send(json.dumps(subscribe).encode('utf-8'))
+        print("Subscribe message sent")
+
+        response = client_socket.recv(1024).decode('utf-8')
+        print(f"Server Response: {response}")
 
         # Start threads for sending and receiving
         receive_thread = threading.Thread(target=receive_messages, args=(client_socket,))
